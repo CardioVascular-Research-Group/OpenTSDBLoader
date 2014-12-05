@@ -31,12 +31,11 @@ import com.google.gson.Gson;
 
 public class SubjectDataLoader {
 
-	private String configFilename = "/resources/server.properties";
+//	private String configFilename = "/resources/server.properties";
 	private OpenTSDBConfiguration openTSDBConfiguration = new OpenTSDBConfiguration();
 	
 	public SubjectDataLoader(String openTSDBUrl, String apiPut, String apiQuery, String awareSupportedParams,
 				String idMatch, String idMatchSheet, String rootDir, String folderPath, String study){
-		openTSDBConfiguration = new OpenTSDBConfiguration();
 		openTSDBConfiguration.setOpenTSDBUrl(openTSDBUrl);
 		openTSDBConfiguration.setApiPut(apiPut);
 		openTSDBConfiguration.setApiQuery(apiQuery);
