@@ -47,13 +47,14 @@ public class SubjectDataLoader {
 		openTSDBConfiguration.setStudyString(study);
 	}
 	
-	private ArrayList<String> extractXSData(XSSFWorkbook wb){
-		
+	private ArrayList<String> extractXSData(XSSFWorkbook wb, InputStream inputStream){
+
 		ArrayList<String> subjectHashes = new ArrayList<String>();
 
 		try {
-//			wb = readFile(openTSDBConfiguration.getIdMatch());
-			wb = new XSSFWorkbook(new FileInputStream(openTSDBConfiguration.getIdMatch()));
+			inputStream.
+//			wb = new XSSFWorkbook(new FileInputStream(openTSDBConfiguration.getIdMatch()));
+			wb = new XSSFWorkbook(inputStream);
 			XSSFSheet sheet = wb.getSheet(openTSDBConfiguration.getIdMatchSheet());
 			for (int r = 1; r < sheet.getLastRowNum()+1; r++) {
 				XSSFRow row = sheet.getRow(r);
@@ -126,12 +127,24 @@ public class SubjectDataLoader {
 		System.out.println(""+sb.toString());  
 	}
 	
-	public void uploadFile(InputStream fileStream){
+	public void uploadFile(InputStream inputStream){
+		
+		System.out.println("Bah.");
+		System.out.println("Filestream passed to  loader is null. " + (inputStream == null));
 		
 		Gson gson = new Gson();
 		int subjectCount = 0;
 		XSSFWorkbook wb = null;
-		ArrayList<String> subjectHashes = extractXSData(wb);
+		try {
+			wb = new XSSFWorkbook(inputStream);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+//		ArrayList<String> subjectHashes = extractXSData(wb);
+		ArrayList<String> subjectHashes = extractXSData(wb, inputStream);
+		
+		System.out.println("wb is null " + (wb == null));
 		
 		for (String subjectHash : subjectHashes) {
 			HashMap<String,Hashtable<Date, Double>> subjectData = new HashMap<String,Hashtable<Date, Double>>();
@@ -143,9 +156,7 @@ public class SubjectDataLoader {
 			String subjectId = "";
 			TreeSet<String> sortedKeys = null;
 			try {
-				wb = new XSSFWorkbook(fileStream);
-//				wb = readFile(openTSDBConfiguration.getFolderPath() + subjectHash + ".xlsx");
-//				wb = new XSSFWorkbook(new FileInputStream(openTSDBConfiguration.getFolderPath() + subjectHash + ".xlsx"));
+				wb = new XSSFWorkbook(inputStream);
 				for (int i = 0; i < wb.getNumberOfSheets(); i++) {
 					XSSFSheet sheetIn = wb.getSheetAt(i);
 					for (int r = 1; r <= sheetIn.getLastRowNum(); r++) {
@@ -181,6 +192,9 @@ public class SubjectDataLoader {
 			tags.put("subjectId", subjectId);
 			
 			try{
+				if(sortedKeys == null){
+					break;
+				}
 				for (String key : sortedKeys) {
 					
 					HttpURLConnection conn = openHTTPConnection();
@@ -204,7 +218,6 @@ public class SubjectDataLoader {
 					wr.write(json);
 					wr.flush();
 					wr.close();
-	
 	
 					int HttpResult = conn.getResponseCode(); 
 	
