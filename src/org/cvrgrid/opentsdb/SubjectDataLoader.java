@@ -1,7 +1,6 @@
 package org.cvrgrid.opentsdb;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -16,7 +15,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -28,14 +26,16 @@ import org.cvrgrid.opentsdb.model.OpenTSDBConfiguration;
 
 import com.google.gson.Gson;
 
+import edu.jhu.cvrg.filestore.main.FileStorer;
+
 
 public class SubjectDataLoader {
 
-//	private String configFilename = "/resources/server.properties";
 	private OpenTSDBConfiguration openTSDBConfiguration = new OpenTSDBConfiguration();
+	private FileStorer fileStorer;
 	
 	public SubjectDataLoader(String openTSDBUrl, String apiPut, String apiQuery, String awareSupportedParams,
-				String idMatch, String idMatchSheet, String rootDir, String folderPath, String study){
+				String idMatch, String idMatchSheet, String rootDir, String folderPath, String study, FileStorer fileStorer){
 		openTSDBConfiguration.setOpenTSDBUrl(openTSDBUrl);
 		openTSDBConfiguration.setApiPut(apiPut);
 		openTSDBConfiguration.setApiQuery(apiQuery);
@@ -45,28 +45,19 @@ public class SubjectDataLoader {
 		openTSDBConfiguration.setRootDir(rootDir);
 		openTSDBConfiguration.setFolderPath(folderPath);
 		openTSDBConfiguration.setStudyString(study);
+		this.fileStorer = fileStorer;
 	}
 	
-	private ArrayList<String> extractXSData(XSSFWorkbook wb, InputStream inputStream){
+	private ArrayList<String> extractXSData(XSSFSheet sheet){
 
 		ArrayList<String> subjectHashes = new ArrayList<String>();
-
-		try {
-			inputStream.
-//			wb = new XSSFWorkbook(new FileInputStream(openTSDBConfiguration.getIdMatch()));
-			wb = new XSSFWorkbook(inputStream);
-			XSSFSheet sheet = wb.getSheet(openTSDBConfiguration.getIdMatchSheet());
 			for (int r = 1; r < sheet.getLastRowNum()+1; r++) {
 				XSSFRow row = sheet.getRow(r);
 				if (row == null) {
 					continue;
 				}
 				subjectHashes.add(row.getCell(2).getStringCellValue());
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
+			}		
 		return subjectHashes;
 	}
 	
@@ -127,26 +118,26 @@ public class SubjectDataLoader {
 		System.out.println(""+sb.toString());  
 	}
 	
-	public void uploadFile(InputStream inputStream){
-		
-		System.out.println("Bah.");
-		System.out.println("Filestream passed to  loader is null. " + (inputStream == null));
+	private XSSFWorkbook getWorkbook(InputStream inputStream){
+		XSSFWorkbook matchWorkbook = null;
+		try {
+			matchWorkbook = new XSSFWorkbook(inputStream);
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		return matchWorkbook;
+	}
+
+	public void uploadFile(String fileName){
 		
 		Gson gson = new Gson();
 		int subjectCount = 0;
-		XSSFWorkbook wb = null;
-		try {
-			wb = new XSSFWorkbook(inputStream);
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-//		ArrayList<String> subjectHashes = extractXSData(wb);
-		ArrayList<String> subjectHashes = extractXSData(wb, inputStream);
-		
-		System.out.println("wb is null " + (wb == null));
-		
+		XSSFWorkbook matchWorkbook = getWorkbook(fileStorer.retrieveFile(fileName));
+		XSSFSheet matchSheet = matchWorkbook.getSheet(openTSDBConfiguration.getIdMatchSheet());
+		ArrayList<String> subjectHashes = extractXSData(matchSheet);
+
 		for (String subjectHash : subjectHashes) {
+			XSSFWorkbook subjectWorkbook = getWorkbook(fileStorer.retrieveFile(subjectHash + ".xlsx"));
 			HashMap<String,Hashtable<Date, Double>> subjectData = new HashMap<String,Hashtable<Date, Double>>();
 			Hashtable<Date, Double> timeSeries = new Hashtable<Date, Double>();
 			HashMap<String,String> tags = new HashMap<String,String>();
@@ -156,12 +147,11 @@ public class SubjectDataLoader {
 			String subjectId = "";
 			TreeSet<String> sortedKeys = null;
 			try {
-				wb = new XSSFWorkbook(inputStream);
-				for (int i = 0; i < wb.getNumberOfSheets(); i++) {
-					XSSFSheet sheetIn = wb.getSheetAt(i);
+				for (int i = 0; i < subjectWorkbook.getNumberOfSheets(); i++) {
+					XSSFSheet sheetIn = subjectWorkbook.getSheetAt(i);
 					for (int r = 1; r <= sheetIn.getLastRowNum(); r++) {
 						XSSFRow row = sheetIn.getRow(r);	
-						Date reformattedTime = fromExcel.parse(row.getCell(0).getStringCellValue());
+						Date reformattedTime = fromExcel.parse(row.getCell(0).getStringCellValue());		
 						timeSeries.put(reformattedTime, row.getCell(1).getNumericCellValue());
 					}
 					subjectData.put(sheetIn.getSheetName(), timeSeries);
@@ -182,9 +172,6 @@ public class SubjectDataLoader {
 				} else {
 					subjectId += new Integer(number).toString();						
 				}
-			
-			} catch (IOException e) {
-				e.printStackTrace();
 			} catch (ParseException e) {
 				e.printStackTrace();
 			}
