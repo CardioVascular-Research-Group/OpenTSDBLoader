@@ -36,5 +36,20 @@
 			<artifactId>gson</artifactId>
 			<version>2.3</version>
 		</dependency>
+		<dependency>
+  			<groupId>edu.cvrgrid</groupId>
+  			<artifactId>cvrg-filestore</artifactId>
+  			<version>1.0</version>
+		</dependency>
 	</dependencies>
+	<repositories>
+    	<repository>
+      		<snapshots>
+        		<enabled>true</enabled>
+      		</snapshots>
+      		<id>thirdparty</id>
+      		<name>3rd Party</name>
+      		<url>http://128.220.76.138:8081/nexus/content/repositories/thirdparty/</url>
+    	</repository>
+  	</repositories>
 </project>
